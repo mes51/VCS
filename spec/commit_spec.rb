@@ -20,7 +20,7 @@ describe Commit do
       let(:hunks) do
         [].tap do |a|
           10.times do |i|
-            a << Hunk.new("/dev/" + i.to_s, i, :create)
+            a << Hunk.new("/dev/" + i.to_s, i, :create, DiffBase)
           end
         end
       end
@@ -31,7 +31,7 @@ describe Commit do
       end
 
       subject { Commit.new(hunks, commit_msg) }
-      its(:hash){ should == "9a8280f54e3eb2d8e02f7cb6d647d182a9e7effe" }
+      its(:hash){ should == "f11d3dd12ccb4dae4f0ad324b4c58373fc928a27" }
       its(:hunks) { should == hunks }
       its(:commit_message) { should == commit_msg }
     end
