@@ -1,0 +1,2 @@
+class DiffBase
+end

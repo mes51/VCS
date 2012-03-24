@@ -6,4 +6,5 @@ RSpec.configure do |conf|
 end
 
 require "rspec"
+require "fakefs"
 require "vcs.rb"
