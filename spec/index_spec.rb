@@ -13,7 +13,7 @@ describe Index do
     before do
       FileUtils.mkdir_p(File.join(project_path, Repository::REPOSITORY_DIR))
       @index = Index.new(project_path)
-      @index.hash = hash
+      @index.indexed_file_hash = hash
       @index.data = data
       @index.hunks = hunks
       @index.save_index
@@ -24,7 +24,7 @@ describe Index do
     end
 
     subject { Index.new(project_path) }
-    its(:hash) { should == hash }
+    its(:indexed_file_hash) { should == hash }
     its(:data) { should == data }
     its("hunks.length") { should == hunks.length }
   end

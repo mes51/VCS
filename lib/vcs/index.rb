@@ -4,7 +4,7 @@ class Index
     load_index
   end
 
-  attr_accessor :hash
+  attr_accessor :indexed_file_hash
   attr_accessor :data
   attr_accessor :hunks
 
@@ -24,7 +24,7 @@ class Index
     end
     if dump.length > 0
       index = Marshal.load(dump)
-      @hash = index.hash
+      @indexed_file_hash = index.indexed_file_hash
       @data = index.data
       @hunks = index.hunks
     end
