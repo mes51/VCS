@@ -33,6 +33,6 @@ class DiffCreator
   end
 
   def create_by_name(name)
-    @m.const_get(name).new
+    @m.const_get(name.to_s).new
   end
 end

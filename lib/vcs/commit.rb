@@ -1,5 +1,3 @@
-require 'digest'
-
 class Commit
   def initialize(hunks, commit_message)
     if hunks.nil? || hunks.class != Array || hunks.any? { |v| v.class != Hunk }
