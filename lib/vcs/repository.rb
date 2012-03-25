@@ -86,4 +86,25 @@ class Repository
         files
     end
   end
+
+  def indexing(files)
+    all = all_changed_files
+    diff_creator = DiffCreator.new
+    hunks = []
+    hash = @index.indexed_file_hash
+    files.each do |f|
+      if all.index f
+        diff = diff_creator.create(File.extname(f))
+        if File.exists? f
+          hunks.concat(diff.diff(f, @index.data[f]))
+          hash[f] = Digest::SHA1.digest(File.open(f).read)
+        else
+          hunks.concat(diff.diff(DiffBase::NULL_FILE, @index.data[f]))
+          hash.delete f
+        end
+      end
+    end
+    @index.hunks = hunks
+    @index.indexed_file_hash = hash
+  end
 end

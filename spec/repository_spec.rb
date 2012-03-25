@@ -164,4 +164,53 @@ describe Repository do
       it { should == [indexing_modified, indexing_untracked, modified, modify_after_indexing_modified, modify_after_indexing_untracked, untracked, deleted, indexing_deleted] }
     end
   end
+
+  context "#indexing" do
+    let(:tracked) { File.expand_path(File.join(project_path, "tracked.txt")) }
+    let(:untracked) { File.expand_path(File.join(project_path, "untracked.txt")) }
+    let(:modified) { File.expand_path(File.join(project_path, "modified.txt")) }
+    let(:deleted) { File.expand_path(File.join(project_path, "deleted.txt")) }
+    let(:text) { "text" }
+    let(:changed) { "changed" }
+    let(:text_hash) { Digest::SHA1.digest(text) }
+    before do
+      FileUtils.mkdir_p(File.join(project_path, Repository::REPOSITORY_DIR))
+      FileUtils.mkdir_p("/dev/")
+      FileUtils.touch(untracked)
+      FileUtils.touch(DiffBase::NULL_FILE)
+      File.open(tracked, "w+") { |f| f.write(text) }
+      File.open(modified, "w+") { |f| f.write(changed) }
+
+      index = Index.new(project_path)
+      index.indexed_file_hash = {
+        tracked => text_hash,
+        modified => text_hash,
+        deleted => text_hash,
+      }
+      index.data = {
+        tracked => text,
+        modified => text,
+        deleted => text,
+      }
+      index.save_index
+      @repo = Repository.new(project_path)
+      @repo.indexing([deleted, modified, tracked, untracked])
+    end
+
+    after do
+      FileUtils.rm(DiffBase::NULL_FILE)
+    end
+
+    it "should equals modified only array" do
+      @repo.modified_files(:indexed).should == [modified]
+    end
+
+    it "should equals untracked only array" do
+      @repo.new_files(:indexed).should == [untracked] 
+    end
+
+    it "should equals modified only array" do
+      @repo.deleted_files(:indexed).should == [deleted] 
+    end
+  end
 end
