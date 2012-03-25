@@ -1,6 +1,6 @@
 class Index
   def initialize(path)
-    @path = path
+    @path = File.join(path, Repository::REPOSITORY_DIR)
     load_index
   end
 

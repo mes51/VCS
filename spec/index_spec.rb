@@ -11,12 +11,16 @@ describe Index do
     let(:hunks) { [Hunk.new(file, { add: changed, delete: text }, :change, :DiffBase)] }
 
     before do
-      FileUtils.mkdir_p(project_path)
+      FileUtils.mkdir_p(File.join(project_path, Repository::REPOSITORY_DIR))
       @index = Index.new(project_path)
       @index.hash = hash
       @index.data = data
       @index.hunks = hunks
       @index.save_index
+    end
+
+    after do
+      FileUtils.rm project_path, :force => true
     end
 
     subject { Index.new(project_path) }
