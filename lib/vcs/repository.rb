@@ -1,2 +1,89 @@
 class Repository
+  REPOSITORY_DIR = ".vcs"
+
+  def initialize(path)
+    @path = path
+    @index = Index.new path
+  end
+
+  def exists?
+    Dir.exists?(File.join(@path, REPOSITORY_DIR))
+  end
+
+  def create_repository(force)
+    dir = File.join(@path, REPOSITORY_DIR)
+
+    if exists? && force
+      FileUtils.rm dir, :force => true
+    end
+
+    if !exists?
+      FileUtils.mkdir_p(dir)
+    else
+      raise RuntimeError
+    end
+  end
+
+  def all_files
+    Dir.glob(File.join(@path, "**/*")).reject do |f|
+      File.directory?(f) || !!f.index(REPOSITORY_DIR)
+    end
+  end
+
+  def all_changed_files
+    all = all_files
+    all.concat(@index.data.keys.reject { |f| !!all.index(f) })
+    all.reject do |f|
+      @index.data.key?(f) && File.exists?(f) && Digest::SHA1.digest(File.open(f).read) == Digest::SHA1.digest(@index.data[f])
+    end
+  end
+
+  def new_files(type)
+    files = all_files.reject { |f|
+       @index.data.key?(f) && @index.indexed_file_hash.key?(f)
+    }.concat(@index.indexed_file_hash.keys.reject { |f| @index.data.key?(f) }).uniq
+
+    case type
+      when :not_indexed
+        files.reject { |f| @index.indexed_file_hash.key?(f) }
+      when :indexed
+        files.reject { |f| !@index.indexed_file_hash.key?(f) }
+      else
+        files
+    end
+  end
+
+  def modified_files(type)
+    files = {}.tap { |h|
+      all_files.reject { |f| !@index.data.key?(f) }.each do |f|
+        h[f] = Digest::SHA1.digest(File.open(f).read)
+      end
+    }.reject { |k, v| v == Digest::SHA1.digest(@index.data[k]) }.merge({}.tap { |h|
+      new_files(:indexed).reject { |f| !File.exists?(f) }.each do |f|
+        h[f] = Digest::SHA1.digest(File.open(f).read)
+      end
+    }.reject { |k, v| @index.indexed_file_hash[k] == v })
+
+    case type
+      when :not_indexed
+        files.reject! { |k, v| @index.indexed_file_hash[k] == v }
+      when :indexed
+        files.reject! { |k, v| !@index.data.key?(k) || @index.indexed_file_hash[k] == Digest::SHA1.digest(@index.data[k]) }
+    end
+    files.keys
+  end
+
+  def deleted_files(type)
+    all = all_files
+    files = @index.data.keys.reject { |f| !!all.index(f) }.concat(@index.indexed_file_hash.keys.reject { |f| !!all.index(f) }).uniq
+
+    case type
+      when :not_indexed
+        files.reject { |f| !@index.indexed_file_hash.key?(f) }
+      when :indexed
+        files.reject { |f| @index.indexed_file_hash.key?(f) }
+      else
+        files
+    end
+  end
 end
