@@ -213,4 +213,41 @@ describe Repository do
       @repo.deleted_files(:indexed).should == [deleted] 
     end
   end
+
+  context "#commit" do
+    let(:modified) { File.expand_path(File.join(project_path, "modified.txt")) }
+    let(:text) { "text" }
+    let(:changed) { "changed" }
+    let(:changed_hash) { Digest::SHA1.digest(changed) }
+    before do
+      FileUtils.mkdir_p(File.join(project_path, Repository::REPOSITORY_DIR))
+      stub(Time).now { Time.new(2012, 3, 26, 12, 30) }
+    end
+
+    context "empty indexed hunks" do
+      before do
+        @repo = Repository.new project_path
+        @repo.commit "first commit"
+      end
+
+      it "not exists .vcs/commits" do
+        File.exists?(File.join(project_path, Repository::REPOSITORY_DIR, "commits")).should be_false
+      end
+    end
+
+    context "exists indexet hunks" do
+      before do
+        index = Index.new project_path
+        index.indexed_file_hash = { modified => changed_hash }
+        index.hunks = [Hunk.new(modified, { add: text, delete: nil }, :create, :DiffBase)]
+        index.save_index
+        @repo = Repository.new project_path
+        @repo.commit "first commit"
+      end
+
+      it "should saved commit array into .vcs/commits" do
+        Marshal.load(File.open(File.join(project_path, Repository::REPOSITORY_DIR, "commits")).read).length.should == 1
+      end
+    end
+  end
 end

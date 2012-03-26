@@ -4,6 +4,8 @@ class Repository
   def initialize(path)
     @path = path
     @index = Index.new path
+    @commits = []
+    load_commits
   end
 
   def exists?
@@ -106,5 +108,24 @@ class Repository
     end
     @index.hunks = hunks
     @index.indexed_file_hash = hash
+  end
+
+  def commit(commit_message)
+    if !!@index.hunks && !@index.hunks.empty?
+      @commits << Commit.new(@index.hunks, commit_message)
+      save_commits
+    end
+  end
+
+  def save_commits
+    File.open(File.join(@path, REPOSITORY_DIR, "commits"), "w+") do |f|
+      f.write(Marshal.dump(@commits))
+    end
+  end
+
+  def load_commits
+    if File.exists? File.join(@path, REPOSITORY_DIR, "commits")
+      @commits = Marshal.load(File.open(File.join(@path, REPOSITORY_DIR, "commits")).read)
+    end
   end
 end
