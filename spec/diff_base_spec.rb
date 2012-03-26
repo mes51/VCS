@@ -83,8 +83,8 @@ describe DiffBase do
         ]
       end
 
-      context ":forwerd given" do
-        subject { @diff.apply(nil, hunks, :forwerd) }
+      context ":forward given" do
+        subject { @diff.apply(nil, hunks, :forward) }
         it { should == changed }
       end
 
@@ -104,8 +104,8 @@ describe DiffBase do
         ]
       end
 
-      context ":forwerd given" do
-        subject { @diff.apply(nil, hunks, :forwerd) }
+      context ":forward given" do
+        subject { @diff.apply(nil, hunks, :forward) }
         it { should == nil }
       end
 

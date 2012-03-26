@@ -31,7 +31,7 @@ class DiffBase
 
   def apply(data, hunks, direction)
     hunks = hunks.reject{ |h| h.change_mode == :none }
-    if direction == :forwerd
+    if direction == :forward
       hunks[hunks.length - 1].diff[:add]
     else
       hunks[0].diff[:remove]
