@@ -114,6 +114,13 @@ class Repository
     if !!@index.hunks && !@index.hunks.empty?
       @commits << Commit.new(@index.hunks, commit_message)
       save_commits
+
+      diff_creator = DiffCreator.new
+      @index.hunks.each do |h|
+        @index.data[h.file] = diff_creator.create_by_name(h.diff_class).apply(@index.data[h.file], [h], :forward)
+      end
+      @index.hunks = nil
+      @index.save_index
     end
   end
 
@@ -126,6 +133,20 @@ class Repository
   def load_commits
     if File.exists? File.join(@path, REPOSITORY_DIR, "commits")
       @commits = Marshal.load(File.open(File.join(@path, REPOSITORY_DIR, "commits")).read)
+    end
+  end
+
+  def commit_log
+    [].tap do |a|
+      if !!@commits
+        @commits.each do |c|
+          a << {
+            hash: c.hash,
+            date: c.commit_date,
+            commit_message: c.commit_message
+          }
+        end
+      end
     end
   end
 end

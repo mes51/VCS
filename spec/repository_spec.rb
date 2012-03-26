@@ -217,8 +217,7 @@ describe Repository do
   context "#commit" do
     let(:modified) { File.expand_path(File.join(project_path, "modified.txt")) }
     let(:text) { "text" }
-    let(:changed) { "changed" }
-    let(:changed_hash) { Digest::SHA1.digest(changed) }
+    let(:text_hash) { Digest::SHA1.digest(text) }
     before do
       FileUtils.mkdir_p(File.join(project_path, Repository::REPOSITORY_DIR))
       stub(Time).now { Time.new(2012, 3, 26, 12, 30) }
@@ -238,7 +237,7 @@ describe Repository do
     context "exists indexet hunks" do
       before do
         index = Index.new project_path
-        index.indexed_file_hash = { modified => changed_hash }
+        index.indexed_file_hash = { modified => text_hash }
         index.hunks = [Hunk.new(modified, { add: text, delete: nil }, :create, :DiffBase)]
         index.save_index
         @repo = Repository.new project_path
@@ -248,6 +247,63 @@ describe Repository do
       it "should saved commit array into .vcs/commits" do
         Marshal.load(File.open(File.join(project_path, Repository::REPOSITORY_DIR, "commits")).read).length.should == 1
       end
+
+      it "should be nil indexed hunk" do
+        Index.new(project_path).hunks.should be_nil
+      end
+
+      it "should equals hash" do
+        Digest::SHA1.digest(Index.new(project_path).data[modified]).should == text_hash
+      end
+    end
+  end
+
+  context "#commit_log" do
+    context "not commited repository" do
+      before do
+        @repo = Repository.new project_path
+      end
+
+      subject { @repo.commit_log }
+      it { should == [] }
+    end
+
+    context "some commited repository" do
+      let(:file) { File.expand_path(File.join(project_path, "file.txt")) }
+      let(:text) { "text" }
+      let(:changed_hash) { Digest::SHA1.digest(changed) }
+      let(:first_commit) { "first commit" }
+      let(:delete_file) { "delete file" }
+      let(:time) { Time.new(2012, 3, 27) }
+      let(:expected) {
+        [
+          {
+            hash: "93fc6951b7fb0a440416435d0ae4fca0a654f30c",
+            date: time,
+            commit_message: first_commit
+          },
+          {
+            hash: "fc5ad68c2a7efff57512155d96f6cf442086b95c",
+            date: time,
+            commit_message: delete_file
+          }
+        ]
+      }
+      before do
+        stub(Time).now { time }
+        commits = [
+          Commit.new([Hunk.new(file, { add: text, delete: nil }, :create, :DiffBase)], "first commit"),
+          Commit.new([Hunk.new(file, { add: nil, delete: text }, :remove, :DiffBase)], "delete file")
+        ]
+        FileUtils.mkdir_p(File.join(project_path, Repository::REPOSITORY_DIR))
+        File.open(File.join(project_path, Repository::REPOSITORY_DIR, "commits"), "w+") do |f|
+          f.write(Marshal.dump(commits))
+        end
+        @repo = Repository.new project_path
+      end
+
+      subject { @repo.commit_log }
+      it { should == expected }
     end
   end
 end
