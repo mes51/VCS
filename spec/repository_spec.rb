@@ -173,11 +173,15 @@ describe Repository do
     let(:text) { "text" }
     let(:changed) { "changed" }
     let(:text_hash) { Digest::SHA1.digest(text) }
+    let(:changed_hash) { Digest::SHA1.digest(changed) }
+    let(:hash_expected) do
+      { modified => changed_hash, tracked => text_hash, untracked => text_hash }
+    end
     before do
       FileUtils.mkdir_p(File.join(project_path, Repository::REPOSITORY_DIR))
       FileUtils.mkdir_p("/dev/")
-      FileUtils.touch(untracked)
       FileUtils.touch(DiffBase::NULL_FILE)
+      File.open(untracked, "w+") { |f| f.write(text) }
       File.open(tracked, "w+") { |f| f.write(text) }
       File.open(modified, "w+") { |f| f.write(changed) }
 
@@ -201,17 +205,9 @@ describe Repository do
       FileUtils.rm(DiffBase::NULL_FILE)
     end
 
-    it "should equals modified only array" do
-      @repo.modified_files(:indexed).should == [modified]
-    end
-
-    it "should equals untracked only array" do
-      @repo.new_files(:indexed).should == [untracked] 
-    end
-
-    it "should equals modified only array" do
-      @repo.deleted_files(:indexed).should == [deleted] 
-    end
+    subject { Index.new(project_path) }
+    its(:hunks) { subject.length.should == 3 }
+    its(:indexed_file_hash) { should == hash_expected }
   end
 
   context "#commit" do

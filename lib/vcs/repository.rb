@@ -108,6 +108,7 @@ class Repository
     end
     @index.hunks = hunks
     @index.indexed_file_hash = hash
+    @index.save_index
   end
 
   def commit(commit_message)
