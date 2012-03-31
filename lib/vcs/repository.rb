@@ -146,7 +146,7 @@ class Repository
         r[h.file] << h
       end
     }.each do |k, v|
-      @index.data[k] = diff_creator.create_by_name(v[0].diff_class).apply(@index.data[k], v , mode)
+      @index.data[k] = diff_creator.create_by_name(v[0].diff_class).apply(@index.data[k], v, mode)
     end
     data = @index.data.dup
     @index.data.each do |k, v|
@@ -177,6 +177,7 @@ class Repository
       count.times do |i|
         apply @commits.pop.hunks, :invers
       end
+
       if mode == :hard
         @index.data.each do |k, v|
           File.open(k, "w+") { |f| f.write(v) }
@@ -190,6 +191,7 @@ class Repository
           h[k] = Digest::SHA1.digest(v)
         end
       end
+      save_commits
       @index.save_index
     else
       raise ArgumentError

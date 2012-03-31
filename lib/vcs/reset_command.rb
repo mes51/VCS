@@ -5,8 +5,8 @@ class ResetCommand < Command
 
   def execute(args)
     mode = :soft
-    if args.length > 1 && args[0] == "--force"
-      mode = :force
+    if args.length > 1 && args[0] == "--hard"
+      mode = :hard
       args.shift
     end
 

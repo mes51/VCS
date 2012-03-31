@@ -34,7 +34,7 @@ class DiffBase
     if direction == :forward
       hunks[hunks.length - 1].diff[:add]
     else
-      hunks[0].diff[:remove]
+      hunks[0].diff[:delete]
     end
   end
 end
