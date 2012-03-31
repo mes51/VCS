@@ -16,11 +16,11 @@ class Repository
     dir = File.join(@path, REPOSITORY_DIR)
 
     if exists? && force
-      FileUtils.rm dir, :force => true
+      FileUtils.rm_r dir, :force => true
     end
 
     if !exists?
-      FileUtils.mkdir_p(dir)
+      FileUtils.mkdir_p dir
     else
       raise RuntimeError
     end

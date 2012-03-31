@@ -20,7 +20,7 @@ describe Index do
     end
 
     after do
-      FileUtils.rm project_path, :force => true
+      FileUtils.rm_r project_path, :force => true
     end
 
     subject { Index.new(project_path) }

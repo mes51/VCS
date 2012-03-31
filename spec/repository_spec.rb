@@ -9,7 +9,7 @@ describe Repository do
   end
 
   after do
-    FileUtils.rm project_path, :force => true
+    FileUtils.rm_r project_path, :force => true
   end
 
   context "#create_repository" do
