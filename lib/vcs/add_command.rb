@@ -4,11 +4,6 @@ class AddCommand < Command
   end
 
   def execute(args)
-    files = [].tap do |a|
-      args.each do |v|
-        a.concat(Dir.glob("*", File::FNM_DOTMATCH).reject { |f| File.directory?(f) })
-      end
-    end
-    @repo.indexing files
+    @repo.indexing args.map { |f| File.expand_path(f) }
   end
 end
