@@ -91,7 +91,6 @@ class Repository
 
   def indexing(files)
     all = all_changed_files
-    diff_creator = DiffCreator.new
     hunks = []
     hash = @index.indexed_file_hash
     files.each do |f|
@@ -116,10 +115,7 @@ class Repository
       @commits << Commit.new(@index.hunks, commit_message)
       save_commits
 
-      diff_creator = DiffCreator.new
-      @index.hunks.each do |h|
-        @index.data[h.file] = diff_creator.create_by_name(h.diff_class).apply(@index.data[h.file], [h], :forward)
-      end
+      apply @index.hunks, :forward
       @index.hunks = nil
       @index.save_index
     end
@@ -137,6 +133,30 @@ class Repository
     end
   end
 
+  def diff_creator
+    @@diff_creator ||= DiffCreator.new
+  end
+
+  def apply(hunks, mode)
+    {}.tap { |r|
+      hunks.each do |h|
+        unless r[h.file]
+          r[h.file] = []
+        end
+        r[h.file] << h
+      end
+    }.each do |k, v|
+      @index.data[k] = diff_creator.create_by_name(v[0].diff_class).apply(@index.data[k], v , mode)
+    end
+    data = @index.data.dup
+    @index.data.each do |k, v|
+      unless v
+        data.delete k
+      end
+    end
+    @index.data = data
+  end
+
   def commit_log
     [].tap do |a|
       if !!@commits
@@ -148,6 +168,31 @@ class Repository
           }
         end
       end
+    end
+  end
+
+  def reset_by_count(count, mode)
+    if count > -1 && count <= @commits.length
+      files = @index.data.keys
+      count.times do |i|
+        apply @commits.pop.hunks, :invers
+      end
+      if mode == :hard
+        @index.data.each do |k, v|
+          File.open(k, "w+") { |f| f.write(v) }
+        end
+        files.reject { |f| !!@index.data[f] }.each do |f|
+          FileUtils.rm f
+        end
+      end
+      @index.indexed_file_hash = {}.tap do |h|
+        @index.data.each do |k, v|
+          h[k] = Digest::SHA1.digest(v)
+        end
+      end
+      @index.save_index
+    else
+      raise ArgumentError
     end
   end
 end

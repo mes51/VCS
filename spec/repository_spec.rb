@@ -6,7 +6,6 @@ describe Repository do
 
   before do
     FileUtils.mkdir_p project_path
-
   end
 
   after do
@@ -300,6 +299,138 @@ describe Repository do
 
       subject { @repo.commit_log }
       it { should == expected }
+    end
+  end
+
+  context "reset methods" do
+    let(:file) { File.expand_path(File.join(project_path, "file.txt")) }
+    let(:tracked) { File.expand_path(File.join(project_path, "tracked.txt")) }
+    let(:untracked) { File.expand_path(File.join(project_path, "untracked.txt")) }
+    let(:text) { "text" }
+    let(:changed) { "changed" }
+    let(:text_hash) { Digest::SHA1.digest(text) }
+    let(:changed_hash) { Digest::SHA1.digest(changed) }
+    let(:first_commit) { "first commit" }
+    let(:delete_file) { "delete file" }
+    let(:create_file) { "create file" }
+    let(:time) { Time.new(2012, 3, 27) }
+    let(:commits) do
+      [
+        Commit.new([Hunk.new(file, { add: text, delete: nil }, :create, :DiffBase)], first_commit),
+        Commit.new([Hunk.new(file, { add: nil, delete: text }, :remove, :DiffBase)], delete_file),
+        Commit.new([Hunk.new(tracked, { add: text, delete: nil }, :create, :DiffBase)], create_file),
+      ]
+    end
+    before do
+      stub(Time).now { time }
+      FileUtils.mkdir_p(File.join(project_path, Repository::REPOSITORY_DIR))
+      File.open(untracked, "w+") { |f| f.write(text) }
+      File.open(tracked, "w+") { |f| f.write(changed) }
+      File.open(File.join(project_path, Repository::REPOSITORY_DIR, "commits"), "w+") do |f|
+        f.write(Marshal.dump(commits))
+      end
+      index = Index.new project_path
+      index.hunks = [
+        Hunk.new(tracked, { add: changed, delete: text }, :change, :DiffBase),
+        Hunk.new(untracked, { add: text, delete: nil }, :create, :DiffBase)
+      ]
+      index.indexed_file_hash = {
+        tracked => changed_hash,
+        untracked => text_hash
+      }
+      index.data = { tracked => text }
+      index.save_index
+      @repo = Repository.new project_path
+    end
+
+    context "#reset_by_count" do
+      context "negative number given" do
+        let(:count) { -1 }
+        specify { expect { @repo.reset_by_count(count, :hard) }.to raise_error(ArgumentError) }
+      end
+
+      context "bigger than all commits count given" do
+        let(:count) { 1000 }
+        specify { expect { @repo.reset_by_count(count, :hard) }.to raise_error(ArgumentError) }
+      end
+
+      context "0 given" do
+        let(:count) { 0 }
+        context ":hard given" do
+          let(:mode) { :hard }
+          before do
+            @repo.reset_by_count count, mode
+            @index = Index.new project_path
+          end
+          
+          it "tracked file should equals before edit file" do
+            Digest::SHA1.digest(File.open(tracked).read).should == text_hash            
+          end
+
+          it "indexed file hash should equals data digests" do
+            @index.indexed_file_hash.all? { |k, v| v == Digest::SHA1.digest(@index.data[k]) }.should be_true
+          end
+        end
+
+        context ":soft given" do
+          let(:mode) { :soft }
+          before do
+            @repo.reset_by_count count, mode
+            @index = Index.new project_path
+          end
+
+          it "tracked file should not change" do
+            Digest::SHA1.digest(File.open(tracked).read).should == changed_hash
+          end
+
+          it "indexed file hash should equals data digests" do
+            @index.indexed_file_hash.all? { |k, v| v == Digest::SHA1.digest(@index.data[k]) }.should be_true
+          end
+        end
+      end
+
+      context "1 given" do
+        let(:count) { 1 }
+        context ":hard given" do
+          let(:mode) { :hard }
+          before do
+            @repo.reset_by_count count, mode
+            @index = Index.new project_path
+          end
+        end
+
+        context ":soft given" do
+          let(:mode) { :soft }
+          before do
+            @repo.reset_by_count count, mode
+            @index = Index.new project_path
+          end
+
+          it "tracking file is empty" do
+            @index.indexed_file_hash.should == {}
+          end
+
+          it "tracked file should not change" do
+            Digest::SHA1.digest(File.open(tracked).read).should == changed_hash
+          end
+        end
+
+        context ":hard given" do
+          let(:mode) { :hard }
+          before do
+            @repo.reset_by_count count, mode
+            @index = Index.new project_path
+          end
+
+          it "tracking file is empty" do
+            @index.indexed_file_hash.should == {}
+          end
+
+          it "should delete tracked file" do
+            File.exists?(tracked).should be_false
+          end
+        end
+      end
     end
   end
 end
